@@ -8,6 +8,7 @@
 #include "Capture.h"
 #include "Core.h"
 #include "FunctionStats.h"
+#include "LiveFunctions.h"
 #include "Log.h"
 #include "OrbitFunction.h"
 #include "Pdb.h"
@@ -16,8 +17,8 @@
 #include "TimerChain.h"
 
 //-----------------------------------------------------------------------------
-LiveFunctionsDataView::LiveFunctionsDataView()
-    : DataView(DataViewType::LIVE_FUNCTIONS) {
+LiveFunctionsDataView::LiveFunctionsDataView(LiveFunctions* live_functions)
+    : DataView(DataViewType::LIVE_FUNCTIONS), live_functions_(live_functions) {
   m_UpdatePeriodMs = 300;
   OnDataChanged();
 }
@@ -146,6 +147,8 @@ const std::string LiveFunctionsDataView::MENU_ACTION_JUMP_TO_MAX =
     "Jump to max";
 const std::string LiveFunctionsDataView::MENU_ACTION_DISASSEMBLY =
     "Go to Disassembly";
+const std::string LiveFunctionsDataView::MENU_ACTION_ITERATE =
+    "Add iterator";
 
 //-----------------------------------------------------------------------------
 std::vector<std::string> LiveFunctionsDataView::GetContextMenu(
@@ -169,7 +172,8 @@ std::vector<std::string> LiveFunctionsDataView::GetContextMenu(
   if (a_SelectedIndices.size() == 1) {
     menu.insert(menu.end(),
                 {MENU_ACTION_JUMP_TO_FIRST, MENU_ACTION_JUMP_TO_LAST,
-                 MENU_ACTION_JUMP_TO_MIN, MENU_ACTION_JUMP_TO_MAX});
+                 MENU_ACTION_JUMP_TO_MIN, MENU_ACTION_JUMP_TO_MAX, 
+                 MENU_ACTION_ITERATE});
   }
   Append(menu, DataView::GetContextMenu(a_ClickedIndex, a_SelectedIndices));
   return menu;
@@ -211,6 +215,12 @@ void LiveFunctionsDataView::OnContextMenu(
     CHECK(a_ItemIndices.size() == 1);
     auto [_, max_box] = GetMinMax(GetFunction(a_ItemIndices[0]));
     JumpToBox(max_box);
+  } else if (a_Action == MENU_ACTION_ITERATE) {
+    Function& function = GetFunction(a_ItemIndices[0]);
+    TextBox* box = JumpToNext(function, std::numeric_limits<TickType>::min());
+
+    // TODO: This needs to be reflected in the UI as well (add buttons).
+    live_functions_->AddIterator(&function, box);
   } else {
     DataView::OnContextMenu(a_Action, a_MenuIndex, a_ItemIndices);
   }
@@ -321,7 +331,7 @@ std::pair<TextBox*, TextBox*> LiveFunctionsDataView::GetMinMax(
   return std::make_pair(min_box, max_box);
 }
 
-void LiveFunctionsDataView::JumpToNext(Function& function,
+TextBox* LiveFunctionsDataView::JumpToNext(Function& function,
                                        TickType current_time) const {
   auto function_address = function.GetVirtualAddress();
   TextBox* box_to_jump = nullptr;
@@ -345,9 +355,10 @@ void LiveFunctionsDataView::JumpToNext(Function& function,
     }
   }
   JumpToBox(box_to_jump);
+  return box_to_jump;
 }
 
-void LiveFunctionsDataView::JumpToPrevious(Function& function,
+TextBox* LiveFunctionsDataView::JumpToPrevious(Function& function,
                                            TickType current_time) const {
   auto function_address = function.GetVirtualAddress();
   TextBox* box_to_jump = nullptr;
@@ -371,4 +382,5 @@ void LiveFunctionsDataView::JumpToPrevious(Function& function,
     }
   }
   JumpToBox(box_to_jump);
+  return box_to_jump;
 }

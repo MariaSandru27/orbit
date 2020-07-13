@@ -128,7 +128,7 @@
          </item>
         </layout>
        </widget>
-       <widget class="QWidget" name="LiveTab">
+       <!-- <widget class="QWidget" name="LiveTab">
         <attribute name="title">
          <string>live</string>
         </attribute>
@@ -137,7 +137,7 @@
           <widget class="OrbitDataViewPanel" name="LiveFunctionsList"/>
          </item>
         </layout>
-       </widget>
+       </widget> -->
        <widget class="QWidget" name="CallStackTab">
         <attribute name="title">
          <string>callstack</string>

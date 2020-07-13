@@ -31,6 +31,7 @@
 #include "orbitaboutdialog.h"
 #include "orbitcodeeditor.h"
 #include "orbitdisassemblydialog.h"
+#include "orbitlivefunctions.h"
 #include "orbitsamplingreport.h"
 #include "outputdialog.h"
 #include "services.pb.h"
@@ -103,7 +104,10 @@ OrbitMainWindow::OrbitMainWindow(QApplication* a_App,
   });
 
   GOrbitApp->SetRefreshCallback(
-      [this](DataViewType a_Type) { this->OnRefreshDataViewPanels(a_Type); });
+      [this](DataViewType a_Type) { 
+        this->OnRefreshDataViewPanels(a_Type); 
+        this->live_functions_->OnDataChanged();
+      });
   GOrbitApp->SetSamplingReportCallback(
       [this](DataView* callstack_data_view,
              std::shared_ptr<SamplingReport> report) {
@@ -120,7 +124,7 @@ OrbitMainWindow::OrbitMainWindow(QApplication* a_App,
   GOrbitApp->SetSaveCaptureCallback(
       [this] { on_actionSave_Capture_triggered(); });
   GOrbitApp->SetSelectLiveTabCallback(
-      [this] { ui->RightTabWidget->setCurrentWidget(ui->LiveTab); });
+      [this] { ui->RightTabWidget->setCurrentWidget(live_tab_); });
   GOrbitApp->SetDisassemblyCallback(
       [this](const std::string& disassembly,
              const std::function<double(size_t)>& line_to_hits) {
@@ -164,9 +168,9 @@ OrbitMainWindow::OrbitMainWindow(QApplication* a_App,
   ui->FunctionsList->Initialize(
       data_view_factory->GetOrCreateDataView(DataViewType::FUNCTIONS),
       SelectionType::kExtended, FontType::kDefault);
-  ui->LiveFunctionsList->Initialize(
-      data_view_factory->GetOrCreateDataView(DataViewType::LIVE_FUNCTIONS),
-      SelectionType::kExtended, FontType::kDefault);
+  // ui->LiveFunctionsList->Initialize(
+  //     data_view_factory->GetOrCreateDataView(DataViewType::LIVE_FUNCTIONS),
+  //     SelectionType::kExtended, FontType::kDefault);
   ui->CallStackView->Initialize(
       data_view_factory->GetOrCreateDataView(DataViewType::CALLSTACK),
       SelectionType::kExtended, FontType::kDefault);
@@ -206,6 +210,7 @@ OrbitMainWindow::OrbitMainWindow(QApplication* a_App,
 
   CreateSamplingTab();
   CreateSelectionTab();
+  CreateLiveTab();
 
   SetTitle({});
   std::string iconFileName = Path::GetExecutablePath() + "orbit.ico";
@@ -268,6 +273,7 @@ void OrbitMainWindow::ShowFeedbackDialog() {
 //-----------------------------------------------------------------------------
 OrbitMainWindow::~OrbitMainWindow() {
   delete m_OutputDialog;
+  delete live_functions_;
   delete ui;
 }
 
@@ -343,7 +349,7 @@ void OrbitMainWindow::UpdatePanel(DataViewType a_Type) {
       ui->FunctionsList->Refresh();
       break;
     case DataViewType::LIVE_FUNCTIONS:
-      ui->LiveFunctionsList->Refresh();
+      live_functions_->Refresh();
       break;
     case DataViewType::MODULES:
       ui->ModulesList->Refresh();
@@ -378,6 +384,22 @@ void OrbitMainWindow::CreateSamplingTab() {
 }
 
 //-----------------------------------------------------------------------------
+void OrbitMainWindow::CreateLiveTab() {
+  live_tab_ = new QWidget();
+  live_layout_ = new QGridLayout(live_tab_);
+  live_layout_->setSpacing(6);
+  live_layout_->setContentsMargins(11, 11, 11, 11);
+  live_functions_ = new OrbitLiveFunctions(live_tab_);
+  live_functions_->Initialize(SelectionType::kExtended, FontType::kDefault);
+  // ui->LiveFunctionsList->Initialize(
+  //     data_view_factory->GetOrCreateDataView(DataViewType::LIVE_FUNCTIONS),
+  //     SelectionType::kExtended, FontType::kDefault);
+
+  live_layout_->addWidget(live_functions_);
+  ui->RightTabWidget->addTab(live_tab_, QString("live"));
+}
+
+//-----------------------------------------------------------------------------
 void OrbitMainWindow::OnNewSamplingReport(
     DataView* callstack_data_view,
     std::shared_ptr<SamplingReport> sampling_report) {
@@ -389,7 +411,7 @@ void OrbitMainWindow::OnNewSamplingReport(
   m_SamplingLayout->addWidget(m_OrbitSamplingReport, 0, 0, 1, 1);
 
   // Automatically switch to sampling tab if not already in live tab.
-  if (ui->RightTabWidget->currentWidget() != ui->LiveTab) {
+  if (ui->RightTabWidget->currentWidget() != live_tab_) {
     ui->RightTabWidget->setCurrentWidget(m_SamplingTab);
   }
 }

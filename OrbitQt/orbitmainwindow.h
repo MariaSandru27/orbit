@@ -37,6 +37,7 @@ class OrbitMainWindow : public QMainWindow {
       std::shared_ptr<class SamplingReport> sampling_report);
   void CreateSamplingTab();
   void CreateSelectionTab();
+  void CreateLiveTab();
   void OnNewSelectionReport(
       DataView* callstack_data_view,
       std::shared_ptr<class SamplingReport> sampling_report);
@@ -103,6 +104,11 @@ class OrbitMainWindow : public QMainWindow {
   class QWidget* m_SelectionTab;
   class OrbitSamplingReport* m_SelectionReport;
   class QGridLayout* m_SelectionLayout;
+
+    // live tab
+  class QWidget* live_tab_;
+  class OrbitLiveFunctions* live_functions_;
+  class QGridLayout* live_layout_;
 
   class OutputDialog* m_OutputDialog;
   std::string m_CurrentPdbName;
