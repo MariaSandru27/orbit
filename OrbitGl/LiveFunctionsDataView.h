@@ -26,14 +26,18 @@ class LiveFunctionsDataView : public DataView {
   void OnDataChanged() override;
   void OnTimer() override;
 
-  TextBox* JumpToNext(Function& function, TickType current_time) const;
-  TextBox* JumpToPrevious(Function& function, TickType current_time) const;
+  void JumpToNext(Function& function, TickType current_time) const;
+  void JumpToPrevious(Function& function, TickType current_time) const;
+
+  TextBox* FindNext(Function& function, TickType current_time) const;
+  TextBox* FindPrevious(Function& function, TickType current_time) const;
+
+  void JumpToBox(const TextBox* box) const;
 
  protected:
   void DoFilter() override;
   void DoSort() override;
   Function& GetFunction(unsigned int a_Row) const;
-  void JumpToBox(const TextBox* box) const;
   std::pair<TextBox*, TextBox*> GetMinMax(Function& function) const;
 
   std::vector<Function*> m_Functions;
